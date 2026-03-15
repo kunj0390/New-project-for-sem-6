@@ -1,0 +1,11 @@
+# Windows PowerShell (preferred)
+.\setup.ps1
+
+# Or using batch wrapper
+run.bat
+
+# If already set up:
+# .venv\Scripts\Activate.ps1
+# python app.py
+
+# Open frontend/index.html in your browser, or use live server.

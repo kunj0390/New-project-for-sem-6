@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MediPulse — Hospital Resource Monitor</title>
+  <link rel="stylesheet" href="style.css" />
+  <!-- Chart.js for data visualization -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <!-- Google Fonts: DM Sans + IBM Plex Mono -->
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════ SIDEBAR ═══ -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+        </svg>
+      </div>
+      <span class="brand-name">HealthSync</span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a class="nav-item active" data-section="overview">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        Overview
+      </a>
+      <a class="nav-item" data-section="analytics">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Analytics
+      </a>
+      <a class="nav-item" data-section="predictions">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        AI Predictions
+      </a>
+      <a class="nav-item" data-section="alerts">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        Alerts
+        <span class="nav-badge" id="alert-count">0</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="connection-status">
+        <span class="status-dot" id="status-dot"></span>
+        <span id="status-text">Connecting…</span>
+      </div>
+      <div class="last-updated">Updated <span id="last-updated-time">—</span></div>
+    </div>
+  </aside>
+
+  <!-- ═══════════════════════════════════ MAIN ═══ -->
+  <main class="main">
+
+    <!-- Top bar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1 class="page-title" id="page-title">Overview</h1>
+        <p class="page-subtitle" id="page-subtitle">Real-time hospital resource monitoring</p>
+      </div>
+      <div class="topbar-right">
+        <div class="refresh-control">
+          <label>Refresh</label>
+          <select id="refresh-interval">
+            <option value="5000">5s</option>
+            <option value="10000" selected>10s</option>
+            <option value="30000">30s</option>
+            <option value="0">Pause</option>
+          </select>
+        </div>
+        <button class="btn-primary" onclick="manualRefresh()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.48"/></svg>
+          Refresh Now
+        </button>
+        <div class="hospital-badge">City General Hospital</div>
+      </div>
+    </header>
+
+    <!-- Alert banner -->
+    <div id="alert-banner" class="alert-banner hidden"></div>
+
+    <!-- ─── OVERVIEW SECTION ─── -->
+    <section id="section-overview" class="section active">
+
+      <!-- KPI Cards Row 1 -->
+      <div class="kpi-grid">
+        <div class="kpi-card" id="kpi-beds">
+          <div class="kpi-icon beds-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 4v16"/><path d="M2 8h18a2 2 0 0 1 2 2v6"/><path d="M2 17h20"/><path d="M6 8v9"/></svg>
+          </div>
+          <div class="kpi-body">
+            <div class="kpi-label">Available Beds</div>
+            <div class="kpi-value" id="val-available-beds">—</div>
+            <div class="kpi-sub">of <span id="val-total-beds">—</span> total</div>
+          </div>
+          <div class="kpi-gauge">
+            <svg viewBox="0 0 36 36" class="gauge-svg">
+              <path class="gauge-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+              <path class="gauge-fill beds-gauge" id="gauge-beds" stroke-dasharray="0, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+              <text x="18" y="20.35" class="gauge-text" id="gauge-beds-pct">0%</text>
+            </svg>
+          </div>
+        </div>
+
+        <div class="kpi-card" id="kpi-icu">
+          <div class="kpi-icon icu-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          </div>
+          <div class="kpi-body">
+            <div class="kpi-label">ICU Beds</div>
+            <div class="kpi-value" id="val-icu-available">—</div>
+            <div class="kpi-sub">of <span id="val-icu-total">—</span> available</div>
+          </div>
+          <div class="kpi-gauge">
+            <svg viewBox="0 0 36 36" class="gauge-svg">
+              <path class="gauge-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+              <path class="gauge-fill icu-gauge" id="gauge-icu" stroke-dasharray="0, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+              <text x="18" y="20.35" class="gauge-text" id="gauge-icu-pct">0%</text>
+            </svg>
+          </div>
+        </div>
+
+        <div class="kpi-card" id="kpi-oxygen">
+          <div class="kpi-icon oxygen-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </div>
+          <div class="kpi-body">
+            <div class="kpi-label">Oxygen Stock</div>
+            <div class="kpi-value" id="val-oxygen">—</div>
+            <div class="kpi-sub">cylinders · <span id="val-oxygen-pct" class="highlight">—</span></div>
+          </div>
+          <div class="kpi-gauge">
+            <svg viewBox="0 0 36 36" class="gauge-svg">
+              <path class="gauge-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+              <path class="gauge-fill oxygen-gauge" id="gauge-oxygen" stroke-dasharray="0, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+              <text x="18" y="20.35" class="gauge-text" id="gauge-oxygen-pct">0%</text>
+            </svg>
+          </div>
+        </div>
+
+        <div class="kpi-card" id="kpi-ventilators">
+          <div class="kpi-icon ventilator-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+          </div>
+          <div class="kpi-body">
+            <div class="kpi-label">Ventilators</div>
+            <div class="kpi-value" id="val-ventilators">—</div>
+            <div class="kpi-sub">of <span id="val-ventilators-total">—</span> available</div>
+          </div>
+          <div class="kpi-gauge">
+            <svg viewBox="0 0 36 36" class="gauge-svg">
+              <path class="gauge-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+              <path class="gauge-fill ventilator-gauge" id="gauge-ventilators" stroke-dasharray="0, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+              <text x="18" y="20.35" class="gauge-text" id="gauge-ventilators-pct">0%</text>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Admission rate strip -->
+      <div class="admission-strip">
+        <div class="admission-item">
+          <span class="admission-label">Patient Admission Rate</span>
+          <span class="admission-value" id="val-admission-rate">—</span>
+          <span class="admission-unit">per hour</span>
+        </div>
+        <div class="admission-item">
+          <span class="admission-label">Bed Occupancy</span>
+          <span class="admission-value" id="val-bed-occ">—</span>
+        </div>
+        <div class="admission-item">
+          <span class="admission-label">ICU Occupancy</span>
+          <span class="admission-value" id="val-icu-occ">—</span>
+        </div>
+        <div class="admission-item">
+          <span class="admission-label">Ventilator Utilisation</span>
+          <span class="admission-value" id="val-vent-occ">—</span>
+        </div>
+      </div>
+
+      <!-- Two charts row -->
+      <div class="chart-row">
+        <div class="chart-card wide">
+          <div class="chart-header">
+            <h3>Bed & ICU Usage — Last 30 Days</h3>
+            <div class="chart-legend">
+              <span class="leg-dot" style="background:#4f86f7"></span>Beds Used
+              <span class="leg-dot" style="background:#f97316"></span>ICU Used
+            </div>
+          </div>
+          <div style="position:relative;height:220px"><canvas id="chart-beds-trend"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>Oxygen Consumption</h3>
+          </div>
+          <div style="position:relative;height:220px"><canvas id="chart-oxygen-trend"></canvas></div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ─── ANALYTICS SECTION ─── -->
+    <section id="section-analytics" class="section">
+      <div class="chart-row">
+        <div class="chart-card wide">
+          <div class="chart-header">
+            <h3>Patient Admissions — Last 30 Days</h3>
+          </div>
+          <div style="position:relative;height:260px"><canvas id="chart-admissions"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header"><h3>Resource Distribution</h3></div>
+          <div style="position:relative;height:260px"><canvas id="chart-donut"></canvas></div>
+        </div>
+      </div>
+      <div class="chart-row">
+        <div class="chart-card full-width">
+          <div class="chart-header">
+            <h3>Multi-Resource Correlation</h3>
+            <p style="font-size:12px;color:#888;margin:0">Beds · ICU · Oxygen · Ventilators over time</p>
+          </div>
+          <div style="position:relative;height:280px"><canvas id="chart-correlation"></canvas></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── PREDICTIONS SECTION ─── -->
+    <section id="section-predictions" class="section">
+      <div class="prediction-hero">
+        <div class="pred-header">
+          <div class="ai-badge">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            AI · Random Forest Model
+          </div>
+          <h2>24-Hour Demand Forecast</h2>
+          <p>Predictions based on historical trends, admission patterns, and seasonal factors.</p>
+          <button class="btn-primary" onclick="loadPredictions()">
+            Run Prediction
+          </button>
+        </div>
+
+        <div class="pred-cards" id="pred-cards">
+          <div class="pred-card">
+            <div class="pred-label">Beds Needed (24h)</div>
+            <div class="pred-value" id="pred-beds">—</div>
+            <div class="pred-sub">predicted occupancy</div>
+          </div>
+          <div class="pred-card highlight-card">
+            <div class="pred-label">Oxygen Required (24h)</div>
+            <div class="pred-value" id="pred-oxygen">—</div>
+            <div class="pred-sub">cylinders forecast</div>
+          </div>
+          <div class="pred-card">
+            <div class="pred-label">ICU Beds Needed (24h)</div>
+            <div class="pred-value" id="pred-icu">—</div>
+            <div class="pred-sub">projected demand</div>
+          </div>
+          <div class="pred-card">
+            <div class="pred-label">Model Confidence</div>
+            <div class="pred-value" id="pred-confidence">—</div>
+            <div class="pred-sub">accuracy estimate</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="chart-card full-width" id="hourly-chart-container" style="display:none">
+        <div class="chart-header">
+          <h3>Hourly Breakdown — Next 24 Hours</h3>
+        </div>
+        <div style="position:relative;height:280px"><canvas id="chart-hourly"></canvas></div>
+      </div>
+    </section>
+
+    <!-- ─── ALERTS SECTION ─── -->
+    <section id="section-alerts" class="section">
+      <div class="alerts-header">
+        <h2>Alert Log</h2>
+        <button class="btn-outline" onclick="loadAlerts()">Refresh</button>
+      </div>
+      <div id="alerts-list" class="alerts-list">
+        <div class="empty-state">No alerts recorded yet.</div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Update Resources Modal -->
+  <div id="update-modal" class="modal hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Update Resources</h3>
+        <button onclick="closeModal()" class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Available Beds</label>
+          <input type="number" id="input-beds" placeholder="e.g. 80" />
+        </div>
+        <div class="form-group">
+          <label>ICU Beds Available</label>
+          <input type="number" id="input-icu" placeholder="e.g. 12" />
+        </div>
+        <div class="form-group">
+          <label>Oxygen Stock (cylinders)</label>
+          <input type="number" id="input-oxygen" placeholder="e.g. 450" />
+        </div>
+        <div class="form-group">
+          <label>Ventilators Available</label>
+          <input type="number" id="input-ventilators" placeholder="e.g. 10" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-outline" onclick="closeModal()">Cancel</button>
+        <button class="btn-primary" onclick="submitUpdate()">Update</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
